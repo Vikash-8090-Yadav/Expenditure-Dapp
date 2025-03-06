@@ -19,8 +19,6 @@ interface YourExpensesProps {
 }
 
 export default function YourExpenses({ expenses }: YourExpensesProps) {
-  const [activeTab, setActiveTab] = useState("summary")
-
   // Calculate category totals
   const categoryTotals = expenses.reduce(
     (acc, expense) => {
@@ -63,7 +61,7 @@ export default function YourExpenses({ expenses }: YourExpensesProps) {
     <div className="space-y-6">
       <h2 className="text-2xl font-bold">Your Expenses</h2>
 
-      <Tabs defaultValue="summary" onValueChange={setActiveTab}>
+      <Tabs defaultValue="summary">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="summary">Summary</TabsTrigger>
           <TabsTrigger value="categories">Categories</TabsTrigger>
@@ -147,7 +145,7 @@ export default function YourExpenses({ expenses }: YourExpensesProps) {
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
-                    <Tooltip formatter={(value) => [`${value.toFixed(2)} ETH`, "Amount"]} />
+                    <Tooltip formatter={(value) => [`${Number(value).toFixed(2)} ETH`, "Amount"]} />
                     <Legend />
                   </PieChart>
                 </ResponsiveContainer>
@@ -168,7 +166,7 @@ export default function YourExpenses({ expenses }: YourExpensesProps) {
                   <BarChart data={monthlyData}>
                     <XAxis dataKey="name" />
                     <YAxis />
-                    <Tooltip formatter={(value) => [`${value} ETH`, "Amount"]} />
+                    <Tooltip formatter={(value) => [`${Number(value).toFixed(2)} ETH`, "Amount"]} />
                     <Legend />
                     <Bar dataKey="amount" fill="#8884d8" name="Expense Amount (ETH)" />
                   </BarChart>
