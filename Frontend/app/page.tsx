@@ -7,6 +7,16 @@ import { Button } from "@/components/ui/button"
 import AddExpenseForm from "@/components/add-expense-form"
 import ExpenseList from "@/components/expense-list"
 import YourExpenses from "@/components/your-expenses"
+import { Expense } from "@/components/your-expenses"
+
+declare global {
+  interface Window {
+    ethereum?: {
+      isMetaMask?: boolean;
+      request: (request: { method: string; params?: any[] }) => Promise<any>;
+    };
+  }
+}
 
 export default function Home() {
   const [account, setAccount] = useState("")
@@ -61,8 +71,8 @@ export default function Home() {
     }
   }
 
-  const addExpense = (expense) => {
-    const newExpense = {
+  const addExpense = (expense: Omit<Expense, 'id' | 'date'>) => {
+    const newExpense: Expense = {
       id: expenses.length + 1,
       ...expense,
       date: new Date().toISOString().split("T")[0],
@@ -85,6 +95,9 @@ export default function Home() {
 
     try {
       // Request approval from the wallet
+      if (!window.ethereum) {
+        throw new Error("Please install MetaMask or another Ethereum wallet")
+      }
       const provider = new ethers.BrowserProvider(window.ethereum)
       const signer = await provider.getSigner()
 
@@ -95,8 +108,6 @@ export default function Home() {
       })
 
       alert(`Transaction sent! Hash: ${tx.hash}`)
-
-      // You could also update the expense status here if needed
     } catch (error) {
       console.error("Error approving expense:", error)
       alert("Failed to approve expense. See console for details.")

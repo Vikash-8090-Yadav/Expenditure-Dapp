@@ -4,13 +4,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from "recharts"
 
-interface Expense {
+export interface Expense {
   id: number
   title: string
   description: string
   category: string
   amount: string
   date: string
+  destinationAddress: string
 }
 
 interface YourExpensesProps {
