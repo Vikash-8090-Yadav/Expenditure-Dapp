@@ -9,14 +9,7 @@ import ExpenseList from "@/components/expense-list"
 import YourExpenses from "@/components/your-expenses"
 import { Expense } from "@/components/your-expenses"
 
-declare global {
-  interface Window {
-    ethereum?: {
-      isMetaMask?: boolean;
-      request: (request: { method: string; params?: any[] }) => Promise<any>;
-    };
-  }
-}
+
 
 export default function Home() {
   const [account, setAccount] = useState("")
