@@ -1,182 +1,155 @@
 "use client"
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from "recharts"
+import { useEffect, useState } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
-export interface Expense {
-  id: number
-  title: string
-  description: string
-  category: string
-  amount: string
-  date: string
-  destinationAddress: string
+import { ethers } from "ethers";
+import { marketplaceAddress } from "../config";
+
+import abi from "../Abi/ExpenseManagement.json";
+
+interface Expense {
+  id: number;
+  title: string;
+  description: string;
+  category: string;
+  amount: string;
+  date: string;
+  destinationAddress?: string;
 }
 
-interface YourExpensesProps {
-  expenses: Expense[]
-}
+export default function YourExpenses() {
+  const [expenses, setExpenses] = useState<Expense[]>([]);
 
-export default function YourExpenses({ expenses }: YourExpensesProps) {
-  // Calculate category totals
-  const categoryTotals = expenses.reduce(
-    (acc, expense) => {
-      const category = expense.category
-      const amount = Number.parseFloat(expense.amount)
-
-      if (!acc[category]) {
-        acc[category] = 0
+  useEffect(() => {
+    const fetchExpenses = async () => {
+      if (!window.ethereum) {
+        console.error("Please install MetaMask or another Ethereum wallet");
+        return;
       }
 
-      acc[category] += amount
-      return acc
-    },
-    {} as Record<string, number>,
-  )
+      const provider = new ethers.providers.Web3Provider(window.ethereum);
+      const signer = provider.getSigner();
+      const contract = new ethers.Contract(marketplaceAddress, abi.abi, signer);
 
-  // Prepare data for charts
-  const pieChartData = Object.keys(categoryTotals).map((category) => ({
-    name: category,
-    value: categoryTotals[category],
-  }))
+      try {
+        const userAddress = await signer.getAddress();
+        const expenseIds = await contract.getExpensesByCreator(userAddress);
+        const expensesData = await Promise.all(
+          expenseIds.map(async (id: number) => {
+            const expense = await contract.getExpense(id);
+            return {
+              id: expense.id.toNumber(),
+              title: expense.title,
+              description: expense.description,
+              category: expense.category,
+              amount: ethers.utils.formatEther(expense.amount),
+              date: new Date().toISOString().split("T")[0], // Assuming you want the current date
+              destinationAddress: expense.destinationAddress,
+            };
+          })
+        );
+        setExpenses(expensesData);
+      } catch (error) {
+        console.error("Error fetching expenses:", error);
+      }
+    };
 
-  // Colors for pie chart
-  const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d", "#ffc658", "#8dd1e1", "#a4de6c"]
+    fetchExpenses();
+  }, []);
 
-  // Monthly data (simplified for demo)
-  const monthlyData = [
-    { name: "Jan", amount: 1200 },
-    { name: "Feb", amount: 900 },
-    { name: "Mar", amount: 1500 },
-    { name: "Apr", amount: 1000 },
-    { name: "May", amount: 800 },
-    { name: "Jun", amount: 1300 },
-  ]
+  // Function to get category color
+  const getCategoryColor = (category: string) => {
+    const categories: Record<string, string> = {
+      Food: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300",
+      Housing: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300",
+      Transportation: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300",
+      Entertainment: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300",
+      Utilities: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300",
+      Healthcare: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300",
+      Personal: "bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-300",
+      Education: "bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-300",
+      Other: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300",
+    };
+
+    return categories[category] || categories["Other"];
+  };
 
   // Calculate total expenses
-  const totalExpenses = expenses.reduce((sum, expense) => sum + Number.parseFloat(expense.amount), 0)
+  const totalExpenses = expenses.reduce((sum, expense) => sum + Number.parseFloat(expense.amount), 0);
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold">Your Expenses</h2>
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold">Your Expenses</h2>
+        <Card className="w-auto">
+          <CardContent className="p-4">
+            <div className="text-sm text-muted-foreground">Total Expenses</div>
+            <div className="text-2xl font-bold">{totalExpenses.toFixed(2)} ETH</div>
+          </CardContent>
+        </Card>
+      </div>
 
-      <Tabs defaultValue="summary">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="summary">Summary</TabsTrigger>
-          <TabsTrigger value="categories">Categories</TabsTrigger>
-          <TabsTrigger value="trends">Trends</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="summary">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Expenses</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{totalExpenses.toFixed(2)} ETH</div>
-                <p className="text-xs text-muted-foreground">+20.1% from last month</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Average Per Transaction</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {expenses.length ? (totalExpenses / expenses.length).toFixed(2) : "0.00"} ETH
-                </div>
-                <p className="text-xs text-muted-foreground">-4.5% from last month</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Number of Transactions</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{expenses.length}</div>
-                <p className="text-xs text-muted-foreground">+12 since last month</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Top Category</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {Object.entries(categoryTotals).sort((a, b) => b[1] - a[1])[0]?.[0] || "None"}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  {Object.entries(categoryTotals)
-                    .sort((a, b) => b[1] - a[1])[0]?.[1]
-                    .toFixed(2) || "0.00"}{" "}
-                  ETH
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="categories">
-          <Card>
-            <CardHeader>
-              <CardTitle>Expense by Category</CardTitle>
-              <CardDescription>Breakdown of your expenses by category</CardDescription>
-            </CardHeader>
-            <CardContent className="px-2">
-              <div className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={pieChartData}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="value"
-                    >
-                      {pieChartData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(value) => [`${Number(value).toFixed(2)} ETH`, "Amount"]} />
-                    <Legend />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="trends">
-          <Card>
-            <CardHeader>
-              <CardTitle>Monthly Expense Trends</CardTitle>
-              <CardDescription>Your expense trends over the past 6 months</CardDescription>
-            </CardHeader>
-            <CardContent className="px-2">
-              <div className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={monthlyData}>
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <Tooltip formatter={(value) => [`${Number(value).toFixed(2)} ETH`, "Amount"]} />
-                    <Legend />
-                    <Bar dataKey="amount" fill="#8884d8" name="Expense Amount (ETH)" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+      <Card>
+        <CardHeader>
+          <CardTitle>Recent Expenses</CardTitle>
+          <CardDescription>A list of your recent expenses and their details</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Title</TableHead>
+                <TableHead>Category</TableHead>
+                <TableHead>Date</TableHead>
+                <TableHead className="text-right">Amount (ETH)</TableHead>
+                <TableHead>Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {expenses.length > 0 ? (
+                expenses.map((expense) => (
+                  <TableRow key={expense.id}>
+                    <TableCell className="font-medium">
+                      <div>{expense.title}</div>
+                      <div className="text-sm text-muted-foreground">{expense.description}</div>
+                      {expense.destinationAddress && (
+                        <div className="text-xs text-muted-foreground truncate max-w-[200px]">
+                          To: {expense.destinationAddress}
+                        </div>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className={getCategoryColor(expense.category)}>
+                        {expense.category}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{expense.date}</TableCell>
+                    <TableCell className="text-right font-medium">{expense.amount}</TableCell>
+                    <TableCell>
+                      <div className="flex space-x-2">
+                        <Button size="sm" className="bg-green-600 hover:bg-green-700">
+                          View
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-6 text-muted-foreground">
+                    No expenses found. Add your first expense to get started.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
     </div>
-  )
+  );
 }
 

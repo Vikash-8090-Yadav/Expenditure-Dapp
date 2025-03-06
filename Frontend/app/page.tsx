@@ -9,7 +9,14 @@ import ExpenseList from "@/components/expense-list"
 import YourExpenses from "@/components/your-expenses"
 import { Expense } from "@/components/your-expenses"
 
-
+declare global {
+  interface Window {
+    ethereum?: {
+      isMetaMask?: boolean;
+      request: (request: { method: string; params?: any[] }) => Promise<any>;
+    };
+  }
+}
 
 export default function Home() {
   const [account, setAccount] = useState("")
@@ -49,12 +56,12 @@ export default function Home() {
     if (typeof window.ethereum !== "undefined") {
       try {
         const accounts = await window.ethereum.request({ method: "eth_requestAccounts" })
-        const provider = new ethers.BrowserProvider(window.ethereum)
+        const provider = new ethers.providers.Web3Provider(window.ethereum as any)
 
         if (accounts.length > 0) {
           setAccount(accounts[0])
           const balance = await provider.getBalance(accounts[0])
-          setBalance(ethers.formatEther(balance).substring(0, 6))
+          setBalance(ethers.utils.formatEther(balance).substring(0, 6))
         }
       } catch (error) {
         console.error("Error connecting to wallet:", error)
@@ -87,17 +94,15 @@ export default function Home() {
     }
 
     try {
-      // Request approval from the wallet
       if (!window.ethereum) {
         throw new Error("Please install MetaMask or another Ethereum wallet")
       }
-      const provider = new ethers.BrowserProvider(window.ethereum)
-      const signer = await provider.getSigner()
+      const provider = new ethers.providers.Web3Provider(window.ethereum as any)
+      const signer = provider.getSigner()
 
-      // Create a transaction
       const tx = await signer.sendTransaction({
         to: expense.destinationAddress,
-        value: ethers.parseEther(expense.amount),
+        value: ethers.utils.parseEther(expense.amount),
       })
 
       alert(`Transaction sent! Hash: ${tx.hash}`)

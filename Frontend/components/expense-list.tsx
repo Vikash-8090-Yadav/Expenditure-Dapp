@@ -1,7 +1,14 @@
+"use client"
+
+import { useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { ethers } from "ethers"
+import { marketplaceAddress } from "../config"
+import abi from "../Abi/ExpenseManagement.json"
+
 interface Expense {
   id: number
   title: string
@@ -10,19 +17,129 @@ interface Expense {
   amount: string
   date: string
   destinationAddress?: string
+  isAccepted?: boolean
+  isRejected?: boolean
+  transactionHash?: string
 }
 
 interface ExpenseListProps {
-  expenses: Expense[]
   onApproveExpense?: (id: number) => void
   onDeclineExpense?: (id: number) => void
 }
 
-export default function ExpenseList({
-  expenses,
-  onApproveExpense = () => {},
-  onDeclineExpense = () => {},
-}: ExpenseListProps) {
+export default function ExpenseList({ onApproveExpense = () => {}, onDeclineExpense = () => {} }: ExpenseListProps) {
+  const [expenses, setExpenses] = useState<Expense[]>([])
+  const [isOwner, setIsOwner] = useState(false)
+  const [contractBalance, setContractBalance] = useState<string>("0")
+  const [loadingActions, setLoadingActions] = useState<Record<string, boolean>>({})
+  const [loadingApprove, setLoadingApprove] = useState<Record<number, boolean>>({})
+  const [loadingDecline, setLoadingDecline] = useState<Record<number, boolean>>({})
+
+  const ownerAddress = "0x45B95a5549111e013E6b9a8D45951362A9f0793f"
+
+  useEffect(() => {
+    const fetchExpensesAndBalance = async () => {
+      if (!window.ethereum) {
+        console.error("Please install MetaMask or another Ethereum wallet")
+        return
+      }
+
+      const provider = new ethers.providers.Web3Provider(window.ethereum)
+      const signer = provider.getSigner()
+      const contract = new ethers.Contract(marketplaceAddress, abi.abi, signer)
+
+      try {
+        const userAddress = await signer.getAddress()
+        setIsOwner(userAddress.toLowerCase() === ownerAddress.toLowerCase())
+
+        // Fetch contract balance
+        const balance = await provider.getBalance(marketplaceAddress)
+        setContractBalance(ethers.utils.formatEther(balance))
+
+        const totalExpenses = await contract.expenseCounter()
+        const expensesData = await Promise.all(
+          Array.from({ length: Number(totalExpenses) }, async (_, index) => {
+            const expense = await contract.getExpense(index + 1)
+            return {
+              id: Number(expense.id),
+              title: expense.title,
+              description: expense.description,
+              category: expense.category,
+              amount: ethers.utils.formatEther(expense.amount),
+              date: new Date().toISOString().split("T")[0], // Assuming you want the current date
+              destinationAddress: expense.destinationAddress,
+              isAccepted: expense.isAccepted,
+              isRejected: expense.isRejected,
+            }
+          }),
+        )
+        setExpenses(expensesData)
+      } catch (error) {
+        console.error("Error fetching expenses:", error)
+      }
+    }
+
+    fetchExpensesAndBalance()
+  }, [])
+
+  const handleAcceptExpense = async (id: number) => {
+    if (!window.ethereum) {
+      console.error("Please install MetaMask or another Ethereum wallet")
+      return
+    }
+
+    setLoadingApprove((prev) => ({ ...prev, [id]: true }))
+
+    const provider = new ethers.providers.Web3Provider(window.ethereum)
+    const signer = provider.getSigner()
+    const contract = new ethers.Contract(marketplaceAddress, abi.abi, signer)
+
+    try {
+      const transaction = await contract.acceptExpense(id)
+      const receipt = await transaction.wait()
+
+      if (receipt.status === 1) {
+        setExpenses((prevExpenses) =>
+          prevExpenses.map((expense) =>
+            expense.id === id ? { ...expense, isAccepted: true, transactionHash: receipt.transactionHash } : expense,
+          ),
+        )
+      }
+    } catch (error) {
+      console.error("Error accepting expense:", error)
+    } finally {
+      setLoadingApprove((prev) => ({ ...prev, [id]: false }))
+    }
+  }
+
+  const handleDeclineExpense = async (id: number) => {
+    if (!window.ethereum) {
+      console.error("Please install MetaMask or another Ethereum wallet")
+      return
+    }
+
+    setLoadingDecline((prev) => ({ ...prev, [id]: true }))
+
+    const provider = new ethers.providers.Web3Provider(window.ethereum)
+    const signer = provider.getSigner()
+    const contract = new ethers.Contract(marketplaceAddress, abi.abi, signer)
+
+    try {
+      const transaction = await contract.rejectExpense(id)
+      const receipt = await transaction.wait()
+
+      if (receipt.status === 1) {
+        setExpenses((prevExpenses) =>
+          prevExpenses.map((expense) => (expense.id === id ? { ...expense, isRejected: true } : expense)),
+        )
+      }
+    } catch (error) {
+      console.error("Error declining expense:", error)
+    } finally {
+      setLoadingDecline((prev) => ({ ...prev, [id]: false }))
+    }
+  }
+
   // Function to get category color
   const getCategoryColor = (category: string) => {
     const categories: Record<string, string> = {
@@ -40,19 +157,29 @@ export default function ExpenseList({
     return categories[category] || categories["Other"]
   }
 
-  // Calculate total expenses
-  const totalExpenses = expenses.reduce((sum, expense) => sum + Number.parseFloat(expense.amount), 0)
+  // Calculate total expenses excluding rejected ones
+  const totalExpenses = expenses
+    .filter((expense) => !expense.isRejected)
+    .reduce((sum, expense) => sum + Number.parseFloat(expense.amount), 0)
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Expense Overview</h2>
-        <Card className="w-auto">
-          <CardContent className="p-4">
-            <div className="text-sm text-muted-foreground">Total Expenses</div>
-            <div className="text-2xl font-bold">{totalExpenses.toFixed(2)} ETH</div>
-          </CardContent>
-        </Card>
+        <div className="flex space-x-3">
+          <Card className="w-auto">
+            <CardContent className="p-3">
+              <div className="text-sm text-muted-foreground">Contract Balance</div>
+              <div className="text-2xl font-bold">{contractBalance} ETH</div>
+            </CardContent>
+          </Card>
+          <Card className="w-auto">
+            <CardContent className="p-3">
+              <div className="text-sm text-muted-foreground">Total Expenses</div>
+              <div className="text-2xl font-bold">{totalExpenses.toFixed(2)} ETH</div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       <Card>
@@ -92,18 +219,97 @@ export default function ExpenseList({
                     <TableCell>{expense.date}</TableCell>
                     <TableCell className="text-right font-medium">{expense.amount}</TableCell>
                     <TableCell>
-                      <div className="flex space-x-2">
-                        <Button
-                          size="sm"
-                          onClick={() => onApproveExpense(expense.id)}
-                          className="bg-green-600 hover:bg-green-700"
-                        >
-                          Approve
-                        </Button>
-                        <Button size="sm" onClick={() => onDeclineExpense(expense.id)} variant="destructive">
-                          Decline
-                        </Button>
-                      </div>
+                      {expense.isAccepted ? (
+                        <div className="text-sm text-green-500">
+                          Accepted -{" "}
+                          <a
+                            href={`https://evmtestnet.confluxscan.net/tx/${expense.transactionHash}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="underline"
+                          >
+                            View Transaction
+                          </a>
+                        </div>
+                      ) : expense.isRejected ? (
+                        <div className="text-sm text-red-500">Rejected</div>
+                      ) : (
+                        <div className="flex space-x-2">
+                          <Button
+                            size="sm"
+                            onClick={() => handleAcceptExpense(expense.id)}
+                            className="bg-green-600 hover:bg-green-700 relative"
+                            disabled={loadingApprove[expense.id] || loadingDecline[expense.id]}
+                          >
+                            {loadingApprove[expense.id] ? (
+                              <>
+                                <span className="opacity-0">Approve</span>
+                                <span className="absolute inset-0 flex items-center justify-center">
+                                  <svg
+                                    className="animate-spin h-4 w-4 text-white"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <circle
+                                      className="opacity-25"
+                                      cx="12"
+                                      cy="12"
+                                      r="10"
+                                      stroke="currentColor"
+                                      strokeWidth="4"
+                                    ></circle>
+                                    <path
+                                      className="opacity-75"
+                                      fill="currentColor"
+                                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                    ></path>
+                                  </svg>
+                                </span>
+                              </>
+                            ) : (
+                              "Approve"
+                            )}
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={() => handleDeclineExpense(expense.id)}
+                            variant="destructive"
+                            className="relative"
+                            disabled={loadingApprove[expense.id] || loadingDecline[expense.id]}
+                          >
+                            {loadingDecline[expense.id] ? (
+                              <>
+                                <span className="opacity-0">Decline</span>
+                                <span className="absolute inset-0 flex items-center justify-center">
+                                  <svg
+                                    className="animate-spin h-4 w-4 text-white"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <circle
+                                      className="opacity-25"
+                                      cx="12"
+                                      cy="12"
+                                      r="10"
+                                      stroke="currentColor"
+                                      strokeWidth="4"
+                                    ></circle>
+                                    <path
+                                      className="opacity-75"
+                                      fill="currentColor"
+                                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                    ></path>
+                                  </svg>
+                                </span>
+                              </>
+                            ) : (
+                              "Decline"
+                            )}
+                          </Button>
+                        </div>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))
