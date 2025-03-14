@@ -1,28 +1,35 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { ethers } from "ethers"
-import { Wallet, DollarSign, PlusCircle, List, BarChart3 } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import AddExpenseForm from "@/components/add-expense-form"
-import ExpenseList from "@/components/expense-list"
-import YourExpenses from "@/components/your-expenses"
-import { Expense } from "@/components/your-expenses"
+import { useState } from "react";
+import { ethers } from "ethers";
+import { Wallet, DollarSign, PlusCircle, List, BarChart3 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import AddExpenseForm from "@/components/add-expense-form";
+import ExpenseList from "@/components/expense-list";
+import YourExpenses from "@/components/your-expenses";
 
-declare global {
-  interface Window {
-    ethereum?: {
-      isMetaMask?: boolean;
-      request: (request: { method: string; params?: any[] }) => Promise<any>;
-    };
-  }
+interface Expense {
+  id: number;
+  title: string;
+  description: string;
+  category: string;
+  amount: string;
+  date: string;
+  destinationAddress: string;
+}
+
+interface ExpenseListProps {
+  expenses: Expense[];
+  setExpenses: React.Dispatch<React.SetStateAction<Expense[]>>;
+  onApproveExpense: (id: number) => Promise<void>;
+  onDeclineExpense: (id: number) => void;
 }
 
 export default function Home() {
-  const [account, setAccount] = useState("")
-  const [balance, setBalance] = useState("0")
-  const [activeTab, setActiveTab] = useState("expenses")
-  const [expenses, setExpenses] = useState([
+  const [account, setAccount] = useState("");
+  const [balance, setBalance] = useState("0");
+  const [activeTab, setActiveTab] = useState("expenses");
+  const [expenses, setExpenses] = useState<Expense[]>([
     {
       id: 1,
       title: "Groceries",
@@ -50,88 +57,86 @@ export default function Home() {
       date: "2023-06-10",
       destinationAddress: "0x45B95a5549111e013E6b9a8D45951362A9f0793f",
     },
-  ])
+  ]);
 
   const connectWallet = async () => {
     if (typeof window.ethereum !== "undefined") {
       try {
-        const accounts = await window.ethereum.request({ method: "eth_requestAccounts" })
-        const provider = new ethers.providers.Web3Provider(window.ethereum as any)
+        const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+        const provider = new ethers.providers.Web3Provider(window.ethereum);
 
         if (accounts.length > 0) {
-          setAccount(accounts[0])
-          const balance = await provider.getBalance(accounts[0])
-          setBalance(ethers.utils.formatEther(balance).substring(0, 6))
+          setAccount(accounts[0]);
+          const balance = await provider.getBalance(accounts[0]);
+          setBalance(ethers.utils.formatEther(balance).substring(0, 6));
         }
       } catch (error) {
-        console.error("Error connecting to wallet:", error)
+        console.error("Error connecting to wallet:", error);
       }
     } else {
-      alert("Please install MetaMask or another Ethereum wallet")
+      alert("Please install MetaMask or another Ethereum wallet");
     }
-  }
+  };
 
   const addExpense = (expense: Omit<Expense, 'id' | 'date'>) => {
     const newExpense: Expense = {
       id: expenses.length + 1,
       ...expense,
       date: new Date().toISOString().split("T")[0],
-    }
-    setExpenses([...expenses, newExpense])
-    setActiveTab("expenses")
-  }
+    };
+    setExpenses([...expenses, newExpense]);
+    setActiveTab("expenses");
+  };
 
   const handleApproveExpense = async (id: number) => {
     if (!account) {
-      alert("Please connect your wallet first")
-      return
+      alert("Please connect your wallet first");
+      return;
     }
 
-    const expense = expenses.find((exp) => exp.id === id)
+    const expense = expenses.find((exp) => exp.id === id);
     if (!expense || !expense.destinationAddress) {
-      alert("Invalid expense or missing destination address")
-      return
+      alert("Invalid expense or missing destination address");
+      return;
     }
 
     try {
       if (!window.ethereum) {
-        throw new Error("Please install MetaMask or another Ethereum wallet")
+        throw new Error("Please install MetaMask or another Ethereum wallet");
       }
-      const provider = new ethers.providers.Web3Provider(window.ethereum as any)
-      const signer = provider.getSigner()
+      const provider = new ethers.providers.Web3Provider(window.ethereum);
+      const signer = provider.getSigner();
 
       const tx = await signer.sendTransaction({
         to: expense.destinationAddress,
         value: ethers.utils.parseEther(expense.amount),
-      })
+      });
 
-      alert(`Transaction sent! Hash: ${tx.hash}`)
+      alert(`Transaction sent! Hash: ${tx.hash}`);
     } catch (error) {
-      console.error("Error approving expense:", error)
-      alert("Failed to approve expense. See console for details.")
+      console.error("Error approving expense:", error);
+      alert("Failed to approve expense. See console for details.");
     }
-  }
+  };
 
   const handleDeclineExpense = (id: number) => {
     if (!account) {
-      alert("Please connect your wallet first")
-      return
+      alert("Please connect your wallet first");
+      return;
     }
 
-    // Find the expense to decline
-    const expenseIndex = expenses.findIndex((exp) => exp.id === id)
+    const expenseIndex = expenses.findIndex((exp) => exp.id === id);
     if (expenseIndex === -1) {
-      alert("Expense not found")
-      return
+      alert("Expense not found");
+      return;
     }
 
-    // Remove the expense from the list
-    const updatedExpenses = [...expenses]
-    updatedExpenses.splice(expenseIndex, 1)
-    setExpenses(updatedExpenses)
+    const updatedExpenses = [...expenses];
+    updatedExpenses.splice(expenseIndex, 1);
+    setExpenses(updatedExpenses);
 
-    alert("Expense declined and removed from the list")
-  }
+    alert("Expense declined and removed from the list");
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -207,6 +212,7 @@ export default function Home() {
           {activeTab === "expenses" && (
             <ExpenseList
               expenses={expenses}
+              setExpenses={setExpenses}
               onApproveExpense={handleApproveExpense}
               onDeclineExpense={handleDeclineExpense}
             />
@@ -244,6 +250,5 @@ export default function Home() {
         </div>
       </footer>
     </div>
-  )
+  );
 }
-
