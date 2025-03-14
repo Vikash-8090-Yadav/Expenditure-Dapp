@@ -106,7 +106,7 @@ export default function YourExpenses() {
                 <TableHead>Category</TableHead>
                 <TableHead>Date</TableHead>
                 <TableHead className="text-right">Amount (ETH)</TableHead>
-                <TableHead>Actions</TableHead>
+                
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -129,13 +129,7 @@ export default function YourExpenses() {
                     </TableCell>
                     <TableCell>{expense.date}</TableCell>
                     <TableCell className="text-right font-medium">{expense.amount}</TableCell>
-                    <TableCell>
-                      <div className="flex space-x-2">
-                        <Button size="sm" className="bg-green-600 hover:bg-green-700">
-                          View
-                        </Button>
-                      </div>
-                    </TableCell>
+                    
                   </TableRow>
                 ))
               ) : (

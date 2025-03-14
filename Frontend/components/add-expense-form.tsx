@@ -34,7 +34,7 @@ export default function AddExpenseForm({ onAddExpense }: AddExpenseFormProps) {
   const [amount, setAmount] = useState("")
   const [destinationAddress, setDestinationAddress] = useState("")
   const [loading, setLoading] = useState(false)
-  // const [transactionCompleted, setTransactionCompleted] = useState(false)
+  const [transactionCompleted, setTransactionCompleted] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
