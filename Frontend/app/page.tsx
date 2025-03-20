@@ -156,7 +156,7 @@ export default function Home() {
           ) : (
             <div className="flex items-center gap-4">
               <div className="wallet-badge px-3 py-1 rounded-md text-sm">
-                <span className="font-medium">{balance} ETH</span>
+                <span className="font-medium">{balance} CFX</span>
               </div>
               <div className="wallet-badge px-3 py-1 rounded-md text-sm">
                 <span className="font-medium">

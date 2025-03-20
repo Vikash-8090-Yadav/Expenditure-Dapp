@@ -170,15 +170,10 @@ export default function ExpenseList({ onApproveExpense = () => {}, onDeclineExpe
           <Card className="w-auto">
             <CardContent className="p-3">
               <div className="text-sm text-muted-foreground">Contract Balance</div>
-              <div className="text-2xl font-bold">{contractBalance} ETH</div>
+              <div className="text-2xl font-bold">{contractBalance} CFX</div>
             </CardContent>
           </Card>
-          <Card className="w-auto">
-            <CardContent className="p-3">
-              <div className="text-sm text-muted-foreground">Total Expenses</div>
-              <div className="text-2xl font-bold">{totalExpenses.toFixed(2)} ETH</div>
-            </CardContent>
-          </Card>
+         
         </div>
       </div>
 
@@ -194,7 +189,7 @@ export default function ExpenseList({ onApproveExpense = () => {}, onDeclineExpe
                 <TableHead>Title</TableHead>
                 <TableHead>Category</TableHead>
                 <TableHead>Date</TableHead>
-                <TableHead className="text-right">Amount (ETH)</TableHead>
+                <TableHead className="text-right">Amount (CFX)</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>

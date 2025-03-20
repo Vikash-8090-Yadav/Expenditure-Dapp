@@ -88,7 +88,7 @@ export default function YourExpenses() {
         <Card className="w-auto">
           <CardContent className="p-4">
             <div className="text-sm text-muted-foreground">Total Expenses</div>
-            <div className="text-2xl font-bold">{totalExpenses.toFixed(2)} ETH</div>
+            <div className="text-2xl font-bold">{totalExpenses.toFixed(2)} CFX</div>
           </CardContent>
         </Card>
       </div>
@@ -105,7 +105,7 @@ export default function YourExpenses() {
                 <TableHead>Title</TableHead>
                 <TableHead>Category</TableHead>
                 <TableHead>Date</TableHead>
-                <TableHead className="text-right">Amount (ETH)</TableHead>
+                <TableHead className="text-right">Amount (CFX)</TableHead>
                 
               </TableRow>
             </TableHeader>

@@ -155,7 +155,7 @@ export default function AddExpenseForm({ onAddExpense }: AddExpenseFormProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="amount">Amount (ETH) *</Label>
+              <Label htmlFor="amount">Amount (CFX) *</Label>
               <Input
                 id="amount"
                 type="number"
