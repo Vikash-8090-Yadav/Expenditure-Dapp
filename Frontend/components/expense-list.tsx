@@ -8,30 +8,18 @@ import { Button } from "@/components/ui/button"
 import { ethers } from "ethers"
 import { marketplaceAddress } from "../config"
 import abi from "../Abi/ExpenseManagement.json"
-
-interface Expense {
-  id: number
-  title: string
-  description: string
-  category: string
-  amount: string
-  date: string
-  destinationAddress?: string
-  isAccepted?: boolean
-  isRejected?: boolean
-  transactionHash?: string
-}
+import { Expense } from "../types/expense"
 
 interface ExpenseListProps {
-  onApproveExpense?: (id: number) => void
-  onDeclineExpense?: (id: number) => void
+  expenses: Expense[];
+  setExpenses: React.Dispatch<React.SetStateAction<Expense[]>>;
+  onApproveExpense: (id: number) => Promise<void>;
+  onDeclineExpense: (id: number) => void;
 }
 
-export default function ExpenseList({ onApproveExpense = () => {}, onDeclineExpense = () => {} }: ExpenseListProps) {
-  const [expenses, setExpenses] = useState<Expense[]>([])
+export default function ExpenseList({ expenses, setExpenses, onApproveExpense, onDeclineExpense }: ExpenseListProps) {
   const [isOwner, setIsOwner] = useState(false)
   const [contractBalance, setContractBalance] = useState<string>("0")
-  const [loadingActions, setLoadingActions] = useState<Record<string, boolean>>({})
   const [loadingApprove, setLoadingApprove] = useState<Record<number, boolean>>({})
   const [loadingDecline, setLoadingDecline] = useState<Record<number, boolean>>({})
 
@@ -66,7 +54,7 @@ export default function ExpenseList({ onApproveExpense = () => {}, onDeclineExpe
               description: expense.description,
               category: expense.category,
               amount: ethers.utils.formatEther(expense.amount),
-              date: new Date().toISOString().split("T")[0], // Assuming you want the current date
+              date: new Date().toISOString().split("T")[0],
               destinationAddress: expense.destinationAddress,
               isAccepted: expense.isAccepted,
               isRejected: expense.isRejected,
@@ -80,61 +68,21 @@ export default function ExpenseList({ onApproveExpense = () => {}, onDeclineExpe
     }
 
     fetchExpensesAndBalance()
-  }, [])
+  }, [setExpenses])
 
   const handleAcceptExpense = async (id: number) => {
-    if (!window.ethereum) {
-      console.error("Please install MetaMask or another Ethereum wallet")
-      return
-    }
-
     setLoadingApprove((prev) => ({ ...prev, [id]: true }))
-
-    const provider = new ethers.providers.Web3Provider(window.ethereum)
-    const signer = provider.getSigner()
-    const contract = new ethers.Contract(marketplaceAddress, abi.abi, signer)
-
     try {
-      const transaction = await contract.acceptExpense(id)
-      const receipt = await transaction.wait()
-
-      if (receipt.status === 1) {
-        setExpenses((prevExpenses) =>
-          prevExpenses.map((expense) =>
-            expense.id === id ? { ...expense, isAccepted: true, transactionHash: receipt.transactionHash } : expense,
-          ),
-        )
-      }
-    } catch (error) {
-      console.error("Error accepting expense:", error)
+      await onApproveExpense(id)
     } finally {
       setLoadingApprove((prev) => ({ ...prev, [id]: false }))
     }
   }
 
   const handleDeclineExpense = async (id: number) => {
-    if (!window.ethereum) {
-      console.error("Please install MetaMask or another Ethereum wallet")
-      return
-    }
-
     setLoadingDecline((prev) => ({ ...prev, [id]: true }))
-
-    const provider = new ethers.providers.Web3Provider(window.ethereum)
-    const signer = provider.getSigner()
-    const contract = new ethers.Contract(marketplaceAddress, abi.abi, signer)
-
     try {
-      const transaction = await contract.rejectExpense(id)
-      const receipt = await transaction.wait()
-
-      if (receipt.status === 1) {
-        setExpenses((prevExpenses) =>
-          prevExpenses.map((expense) => (expense.id === id ? { ...expense, isRejected: true } : expense)),
-        )
-      }
-    } catch (error) {
-      console.error("Error declining expense:", error)
+      await onDeclineExpense(id)
     } finally {
       setLoadingDecline((prev) => ({ ...prev, [id]: false }))
     }
@@ -157,11 +105,6 @@ export default function ExpenseList({ onApproveExpense = () => {}, onDeclineExpe
     return categories[category] || categories["Other"]
   }
 
-  // Calculate total expenses excluding rejected ones
-  const totalExpenses = expenses
-    .filter((expense) => !expense.isRejected)
-    .reduce((sum, expense) => sum + Number.parseFloat(expense.amount), 0)
-
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -173,14 +116,17 @@ export default function ExpenseList({ onApproveExpense = () => {}, onDeclineExpe
               <div className="text-2xl font-bold">{contractBalance} CFX</div>
             </CardContent>
           </Card>
-         
         </div>
       </div>
 
       <Card>
         <CardHeader>
           <CardTitle>Recent Expenses</CardTitle>
-          <CardDescription>A list of your recent expenses and their details</CardDescription>
+          <CardDescription>
+            {isOwner 
+              ? "As the owner, you can approve or reject expenses" 
+              : "You can view all expenses here"}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
@@ -228,7 +174,7 @@ export default function ExpenseList({ onApproveExpense = () => {}, onDeclineExpe
                         </div>
                       ) : expense.isRejected ? (
                         <div className="text-sm text-red-500">Rejected</div>
-                      ) : (
+                      ) : isOwner ? (
                         <div className="flex space-x-2">
                           <Button
                             size="sm"
@@ -304,6 +250,8 @@ export default function ExpenseList({ onApproveExpense = () => {}, onDeclineExpe
                             )}
                           </Button>
                         </div>
+                      ) : (
+                        <div className="text-sm text-muted-foreground">Waiting for owner approval</div>
                       )}
                     </TableCell>
                   </TableRow>

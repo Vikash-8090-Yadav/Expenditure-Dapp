@@ -4,25 +4,17 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-
 import { ethers } from "ethers";
 import { marketplaceAddress } from "../config";
-
 import abi from "../Abi/ExpenseManagement.json";
+import { Expense } from "../types/expense";
 
-interface Expense {
-  id: number;
-  title: string;
-  description: string;
-  category: string;
-  amount: string;
-  date: string;
-  destinationAddress?: string;
+interface YourExpensesProps {
+  expenses: Expense[];
 }
 
-export default function YourExpenses() {
-  const [expenses, setExpenses] = useState<Expense[]>([]);
+export default function YourExpenses({ expenses }: YourExpensesProps) {
+  const [expensesState, setExpenses] = useState<Expense[]>(expenses);
 
   useEffect(() => {
     const fetchExpenses = async () => {
@@ -79,7 +71,7 @@ export default function YourExpenses() {
   };
 
   // Calculate total expenses
-  const totalExpenses = expenses.reduce((sum, expense) => sum + Number.parseFloat(expense.amount), 0);
+  const totalExpenses = expensesState.reduce((sum, expense) => sum + Number.parseFloat(expense.amount), 0);
 
   return (
     <div className="space-y-6">
@@ -110,8 +102,8 @@ export default function YourExpenses() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {expenses.length > 0 ? (
-                expenses.map((expense) => (
+              {expensesState.length > 0 ? (
+                expensesState.map((expense) => (
                   <TableRow key={expense.id}>
                     <TableCell className="font-medium">
                       <div>{expense.title}</div>

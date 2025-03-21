@@ -7,23 +7,14 @@ import { Button } from "@/components/ui/button";
 import AddExpenseForm from "@/components/add-expense-form";
 import ExpenseList from "@/components/expense-list";
 import YourExpenses from "@/components/your-expenses";
+import { Expense } from "@/types/expense";
 
-interface Expense {
-  id: number;
-  title: string;
-  description: string;
-  category: string;
-  amount: string;
-  date: string;
-  destinationAddress: string;
-}
-
-interface ExpenseListProps {
-  expenses: Expense[];
-  setExpenses: React.Dispatch<React.SetStateAction<Expense[]>>;
-  onApproveExpense: (id: number) => Promise<void>;
-  onDeclineExpense: (id: number) => void;
-}
+// interface ExpenseListProps {
+//   expenses: Expense[];
+//   setExpenses: React.Dispatch<React.SetStateAction<Expense[]>>;
+//   onApproveExpense: (id: number) => Promise<void>;
+//   onDeclineExpense: (id: number) => void;
+// }
 
 export default function Home() {
   const [account, setAccount] = useState("");

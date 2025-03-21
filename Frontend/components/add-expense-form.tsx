@@ -33,8 +33,7 @@ export default function AddExpenseForm({ onAddExpense }: AddExpenseFormProps) {
   const [category, setCategory] = useState("")
   const [amount, setAmount] = useState("")
   const [destinationAddress, setDestinationAddress] = useState("")
-  const [loading, setLoading] = useState(false)
-  const [transactionCompleted, setTransactionCompleted] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -45,12 +44,12 @@ export default function AddExpenseForm({ onAddExpense }: AddExpenseFormProps) {
     }
 
     try {
-      setLoading(true)
+      setIsSubmitting(true)
 
       // Validate Ethereum address
       if (!ethers.utils.isAddress(destinationAddress)) {
         toast.error("Please enter a valid Ethereum address")
-        setLoading(false)
+        setIsSubmitting(false)
         return
       }
 
@@ -73,7 +72,6 @@ export default function AddExpenseForm({ onAddExpense }: AddExpenseFormProps) {
 
       if (receipt.status === 1) {
         toast.success("Expense added successfully!")
-        setTransactionCompleted(true)
 
         // Only call onAddExpense after successful transaction
         onAddExpense({
@@ -97,7 +95,7 @@ export default function AddExpenseForm({ onAddExpense }: AddExpenseFormProps) {
       console.error("Error adding expense:", error)
       toast.error("Failed to add expense. See console for details.")
     } finally {
-      setLoading(false)
+      setIsSubmitting(false)
     }
   }
 
@@ -117,7 +115,7 @@ export default function AddExpenseForm({ onAddExpense }: AddExpenseFormProps) {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               required
-              disabled={loading}
+              disabled={isSubmitting}
             />
           </div>
 
@@ -129,14 +127,14 @@ export default function AddExpenseForm({ onAddExpense }: AddExpenseFormProps) {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
-              disabled={loading}
+              disabled={isSubmitting}
             />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
               <Label htmlFor="category">Category *</Label>
-              <Select value={category} onValueChange={setCategory} disabled={loading}>
+              <Select value={category} onValueChange={setCategory} disabled={isSubmitting}>
                 <SelectTrigger id="category">
                   <SelectValue placeholder="Select category" />
                 </SelectTrigger>
@@ -165,7 +163,7 @@ export default function AddExpenseForm({ onAddExpense }: AddExpenseFormProps) {
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 required
-                disabled={loading}
+                disabled={isSubmitting}
               />
             </div>
           </div>
@@ -178,13 +176,13 @@ export default function AddExpenseForm({ onAddExpense }: AddExpenseFormProps) {
               value={destinationAddress}
               onChange={(e) => setDestinationAddress(e.target.value)}
               required
-              disabled={loading}
+              disabled={isSubmitting}
             />
           </div>
 
           <div className="flex justify-end">
-            <Button type="submit" disabled={loading} className="relative">
-              {loading ? (
+            <Button type="submit" disabled={isSubmitting} className="relative">
+              {isSubmitting ? (
                 <>
                   <span className="opacity-0">Add Expense</span>
                   <span className="absolute inset-0 flex items-center justify-center">
